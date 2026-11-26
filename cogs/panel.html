@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DS-BOT · Панель</title>
+<style>
+  :root{--bg:#0e0f13;--card:#17191f;--card2:#1e2129;--line:#2a2e38;--txt:#eceef2;--mut:#8b90a0;--acc:#1db954;--acc2:#5865f2;--red:#ed4245}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 "Segoe UI",system-ui,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(14,15,19,.92);backdrop-filter:blur(8px);z-index:5}
+  header h1{font-size:18px;margin:0;flex:1}
+  select,input,button{font:inherit;color:var(--txt)}
+  select,input[type=text]{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  button{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer}
+  button:hover{border-color:#444a57}
+  button.big{font-size:22px;width:54px;height:54px;border-radius:50%;padding:0}
+  button.play{background:var(--acc);border-color:var(--acc);color:#000}
+  button.on{background:var(--acc2);border-color:var(--acc2)}
+  button.danger:hover{border-color:var(--red)}
+  main{max-width:1150px;margin:0 auto;padding:18px;display:grid;grid-template-columns:1.1fr 1fr;gap:18px}
+  @media(max-width:860px){main{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .card h2{font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 0 12px}
+  .np{display:flex;gap:14px;align-items:center}
+  .np img{width:120px;height:120px;object-fit:cover;border-radius:10px;background:#000;flex:none}
+  .np .t{font-size:18px;font-weight:600;word-break:break-word}
+  .np .t a{color:inherit;text-decoration:none}
+  .mut{color:var(--mut);font-size:13px}
+  .bar{height:8px;background:var(--card2);border-radius:5px;margin:14px 0 4px;cursor:pointer;position:relative}
+  .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--acc);border-radius:5px}
+  .times{display:flex;justify-content:space-between;font-size:12px;color:var(--mut)}
+  .ctrl{display:flex;gap:10px;justify-content:center;align-items:center;margin:14px 0 6px;flex-wrap:wrap}
+  .row{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+  .row label{color:var(--mut);font-size:13px;min-width:90px}
+  input[type=range]{flex:1;accent-color:var(--acc)}
+  ul{list-style:none;margin:0;padding:0}
+  li.q{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;border:1px solid transparent}
+  li.q:hover{background:var(--card2)}
+  li.q.drag{opacity:.4}
+  li.q.over{border-color:var(--acc2)}
+  li.q .n{color:var(--mut);width:24px;text-align:right;flex:none;cursor:grab}
+  li.q .tt{flex:1;min-width:0}
+  li.q .tt div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  li.q button{padding:4px 8px;font-size:13px}
+  .res img{width:64px;height:36px;object-fit:cover;border-radius:4px;flex:none}
+  #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000;border:1px solid var(--line);padding:10px 16px;border-radius:10px;opacity:0;transition:.3s;pointer-events:none;z-index:9}
+  #toast.show{opacity:1}
+  .empty{color:var(--mut);text-align:center;padding:20px}
+  a{color:#8ab4ff}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎵 DS-BOT</h1>
+  <select id="guildSel" title="Сервер"></select>
+  <a href="/films" class="mut">🎞️ Фильмы</a>
+</header>
+
+<main>
+  <section>
+    <div class="card" id="connectCard" style="display:none">
+      <h2>Бот не в голосовом канале</h2>
+      <div class="row">
+        <select id="vcSel" style="flex:1"></select>
+        <button onclick="act('join',{channel_id:vcSel.value})">🔌 Подключить</button>
+      </div>
+    </div>
+
+    <div class="card" id="npCard">
+      <h2>Сейчас играет <span id="chanName" class="mut"></span></h2>
+      <div class="np">
+        <img id="npImg" alt="">
+        <div style="min-width:0">
+          <div class="t" id="npTitle">Ничего не играет</div>
+          <div class="mut" id="npSub"></div>
+        </div>
+      </div>
+      <div class="bar" id="bar" title="Нажми, чтобы перемотать"><i id="barFill"></i></div>
+      <div class="times"><span id="tPos">0:00</span><span id="tDur">0:00</span></div>
+      <div class="ctrl">
+        <button class="big" id="loopBtn" title="Повтор" onclick="act('loop')">🔁</button>
+        <button class="big danger" title="Стоп" onclick="act('stop')">⏹️</button>
+        <button class="big play" id="playBtn" title="Пауза / продолжить" onclick="act('toggle')">⏸️</button>
+        <button class="big" title="Пропустить" onclick="act('skip')">⏭️</button>
+        <button class="big" title="Перемешать" onclick="act('shuffle')">🔀</button>
+      </div>
+      <div class="row"><label>🔊 Громкость</label><input type="range" id="vol" min="1" max="150"><span id="volTxt" style="width:44px;text-align:right">50%</span></div>
+      <div class="row"><label>🎛️ Эффект</label><select id="fltSel" style="flex:1"></select></div>
+      <div class="row"><label>🎚️ Выравнивание</label>
+        <button id="normBtn" onclick="act('normalize',{value:!state.normalize})">вкл</button>
+        <span class="mut">тихие и громкие треки звучат одинаково</span>
+      </div>
+      <div class="row" style="justify-content:flex-end"><button class="danger" onclick="if(confirm('Выгнать бота из канала?'))act('leave')">👋 Отключить бота</button></div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <h2>Добавить музыку</h2>
+      <form class="row" style="margin:0" onsubmit="event.preventDefault();doSearch()">
+        <input type="text" id="q" placeholder="Название песни или ссылка (YouTube, Spotify, плейлист…)" style="flex:1">
+        <button type="submit">🔎</button>
+      </form>
+      <ul id="results" style="margin-top:10px"></ul>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2 style="display:flex;justify-content:space-between;align-items:center">
+      <span>Очередь <span id="qInfo" class="mut"></span></span>
+      <button class="danger" onclick="if(confirm('Очистить очередь?'))act('clear')">🧹 Очистить</button>
+    </h2>
+    <ul id="queue"></ul>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+let guild = params.get('guild') || '';
+let state = {}, posBase = 0, posAt = 0, dragFrom = null, volTimer = null;
+
+const fmt = s => { if (s == null) return 'LIVE'; s = Math.floor(s); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = String(s%60).padStart(2,'0'); return h ? `${h}:${String(m).padStart(2,'0')}:${x}` : `${m}:${x}`; };
+const esc = t => (t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2500); }
+
+async function api(path, body){
+  const opt = body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {};
+  const r = await fetch(path, opt);
+  if (r.status === 403) { toast('Нужен пароль — открой ссылку из /panel'); throw 0; }
+  const j = await r.json();
+  if (!r.ok) { toast('⚠️ ' + (j.error || 'Ошибка')); throw 0; }
+  return j;
+}
+async function load(){ try { render(await api('/api/state' + (guild ? '?guild='+guild : ''))); } catch(e){} }
+async function act(action, extra={}){
+  try { const s = await api('/api/action', {guild, action, ...extra}); if (s.message) toast(s.message); render(s); } catch(e){}
+}
+
+function render(s){
+  state = s; guild = s.guild.id;
+  $('guildSel').innerHTML = s.guilds.map(g => `<option value="${g.id}" ${g.id==guild?'selected':''}>${esc(g.name)}</option>`).join('');
+  $('guildSel').style.display = s.guilds.length > 1 ? '' : 'none';
+
+  $('connectCard').style.display = s.connected ? 'none' : '';
+  if (!s.connected) {
+    const cur = $('vcSel').value;
+    $('vcSel').innerHTML = s.voice_channels.map(c => `<option value="${c.id}">🔊 ${esc(c.name)}${c.members?` (${c.members} чел.)`:''}</option>`).join('');
+    if (cur) $('vcSel').value = cur;
+  }
+  $('chanName').textContent = s.channel ? '· ' + s.channel : '';
+
+  const c = s.current;
+  $('npTitle').innerHTML = c ? (c.url ? `<a href="${esc(c.url)}" target="_blank">${esc(c.title)}</a>` : esc(c.title)) : 'Ничего не играет';
+  $('npSub').textContent = c ? [c.uploader, 'заказал: ' + c.requester].filter(Boolean).join(' · ') : 'Добавь музыку справа или ниже';
+  $('npImg').src = c && c.thumbnail ? c.thumbnail : 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"/%3E';
+  posBase = c ? c.position : 0; posAt = performance.now();
+  $('tDur').textContent = c ? fmt(c.duration) : '0:00';
+  $('playBtn').textContent = s.paused ? '▶️' : '⏸️';
+  $('loopBtn').textContent = s.loop === 'track' ? '🔂' : '🔁';
+  $('loopBtn').classList.toggle('on', s.loop !== 'off');
+  $('loopBtn').title = {off:'Повтор выключен', track:'Повтор трека', queue:'Повтор очереди'}[s.loop];
+  if (!volTimer) { $('vol').value = s.volume; $('volTxt').textContent = s.volume + '%'; }
+  $('fltSel').innerHTML = s.filters.map(([k,n]) => `<option value="${k}" ${k==s.filter?'selected':''}>${esc(n)}</option>`).join('');
+  $('normBtn').textContent = s.normalize ? 'вкл' : 'выкл';
+  $('normBtn').classList.toggle('on', s.normalize);
+
+  const total = s.queue.reduce((a,t) => a + (t.duration||0), 0);
+  $('qInfo').textContent = s.queue.length ? `· ${s.queue.length} шт. · ${fmt(total)}` : '';
+  $('queue').innerHTML = s.queue.length ? s.queue.map((t,i) => `
+    <li class="q" draggable="true" data-i="${i}">
+      <span class="n" title="Перетащи">${i+1}</span>
+      <div class="tt"><div>${t.url ? `<a href="${esc(t.url)}" target="_blank" style="color:inherit;text-decoration:none">${esc(t.title)}</a>` : esc(t.title)}</div>
+        <div class="mut">${fmt(t.duration)} · ${esc(t.requester)}</div></div>
+      <button title="Выше" onclick="move(${i},${i-1})" ${i?'':'disabled'}>▲</button>
+      <button title="Ниже" onclick="move(${i},${i+1})" ${i<s.queue.length-1?'':'disabled'}>▼</button>
+      <button title="Включить сейчас" onclick="act('skipto',{index:${i}})">▶</button>
+      <button title="Убрать" class="danger" onclick="act('remove',{index:${i}})">✕</button>
+    </li>`).join('') : '<div class="empty">Очередь пуста</div>';
+}
+function move(a,b){ if (b>=0 && b<state.queue.length) act('move',{from:a,to:b}); }
+
+// перетаскивание в очереди
+$('queue').addEventListener('dragstart', e => { const li=e.target.closest('li'); if(!li) return; dragFrom=+li.dataset.i; li.classList.add('drag'); });
+$('queue').addEventListener('dragend', e => { document.querySelectorAll('li.q').forEach(l => l.classList.remove('drag','over')); });
+$('queue').addEventListener('dragover', e => { e.preventDefault(); const li=e.target.closest('li'); document.querySelectorAll('li.over').forEach(l=>l.classList.remove('over')); if(li) li.classList.add('over'); });
+$('queue').addEventListener('drop', e => { e.preventDefault(); const li=e.target.closest('li'); if(li && dragFrom!=null && +li.dataset.i!==dragFrom) act('move',{from:dragFrom,to:+li.dataset.i}); dragFrom=null; });
+
+// перемотка по клику на полосу
+$('bar').addEventListener('click', e => {
+  const c = state.current; if (!c || !c.duration) return;
+  const r = $('bar').getBoundingClientRect();
+  act('seek', {seconds: Math.floor((e.clientX - r.left) / r.width * c.duration)});
+});
+$('vol').addEventListener('input', e => {
+  $('volTxt').textContent = e.target.value + '%';
+  clearTimeout(volTimer); volTimer = setTimeout(() => { volTimer = null; act('volume', {value:+e.target.value}); }, 250);
+});
+$('fltSel').addEventListener('change', e => act('filter', {name:e.target.value}));
+$('guildSel').addEventListener('change', e => { guild = e.target.value; history.replaceState(null,'','?guild='+guild); load(); });
+
+async function doSearch(){
+  const q = $('q').value.trim(); if (!q) return;
+  if (/^https?:\/\//.test(q)) { await act('play', {query:q}); $('q').value=''; $('results').innerHTML=''; return; }
+  $('results').innerHTML = '<div class="empty">Ищу…</div>';
+  try {
+    const res = await api('/api/search?q=' + encodeURIComponent(q));
+    $('results').innerHTML = res.length ? res.map(t => `
+      <li class="q res">
+        ${t.thumbnail ? `<img src="${esc(t.thumbnail)}" alt="">` : ''}
+        <div class="tt"><div>${esc(t.title)}</div><div class="mut">${esc(t.uploader||'')} · ${fmt(t.duration)}</div></div>
+        <button title="В конец очереди" onclick='addRes(this,"play",${JSON.stringify(t.url)})'>➕</button>
+        <button title="Следующим" onclick='addRes(this,"playnext",${JSON.stringify(t.url)})'>⏭</button>
+      </li>`).join('') : '<div class="empty">Ничего не найдено</div>';
+  } catch(e) { $('results').innerHTML = ''; }
+}
+async function addRes(btn, action, url){ btn.disabled = true; await act(action, {query:url}); btn.textContent = '✓'; }
+
+// плавный прогресс между опросами
+setInterval(() => {
+  const c = state.current;
+  if (!c) { $('barFill').style.width = '0'; $('tPos').textContent = '0:00'; return; }
+  const pos = state.paused ? posBase : posBase + (performance.now() - posAt) / 1000 * (state.rate || 1);
+  $('tPos').textContent = fmt(pos);
+  $('barFill').style.width = c.duration ? Math.min(100, pos / c.duration * 100) + '%' : '100%';
+}, 250);
+setInterval(() => { if (!document.hidden) load(); }, 2000);
+load();
+</script>
+</body>
+</html>
